@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>小红书账号ID采集工具</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; color: #333; }
+        .container { max-width: 1100px; margin: 0 auto; padding: 20px; }
+        header { background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
+        header h1 { font-size: 22px; color: #1a1a1a; }
+        header p { font-size: 14px; color: #666; margin-top: 4px; }
+        .card { background: #fff; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-bottom: 20px; }
+        .card h2 { font-size: 16px; margin-bottom: 16px; color: #1a1a1a; display: flex; align-items: center; justify-content: space-between; }
+        .form-group { margin-bottom: 14px; }
+        label { display: block; font-size: 14px; font-weight: 500; margin-bottom: 6px; color: #444; }
+        textarea, input[type="number"], select { width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; outline: none; transition: border-color 0.2s; }
+        textarea:focus, input:focus, select:focus { border-color: #ff2442; }
+        textarea { min-height: 80px; resize: vertical; }
+        select { background: #fff; cursor: pointer; }
+        .btn { display: inline-flex; align-items: center; gap: 6px; padding: 10px 24px; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.2s; }
+        .btn-primary { background: #ff2442; color: #fff; }
+        .btn-primary:hover { background: #e01e38; }
+        .btn-primary:disabled { background: #ccc; cursor: not-allowed; }
+        .btn-sm { padding: 6px 14px; font-size: 12px; }
+        .btn-outline { background: transparent; border: 1px solid #ddd; color: #666; }
+        .btn-outline:hover { border-color: #ff2442; color: #ff2442; }
+        .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+        .stat-card { background: #fff; border-radius: 10px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); text-align: center; }
+        .stat-card .stat-value { font-size: 28px; font-weight: 700; color: #1a1a1a; }
+        .stat-card .stat-label { font-size: 12px; color: #999; margin-top: 4px; }
+        .stat-card.stat-total { border-left: 3px solid #666; }
+        .stat-card.stat-completed { border-left: 3px solid #2e7d32; }
+        .stat-card.stat-running { border-left: 3px solid #1565c0; }
+        .stat-card.stat-accounts { border-left: 3px solid #ff2442; }
+        .filter-bar { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
+        .filter-btn-group { display: flex; gap: 4px; }
+        .filter-btn { padding: 8px 16px; border: 1px solid #ddd; border-radius: 20px; background: #fff; font-size: 13px; cursor: pointer; transition: all 0.2s; color: #666; }
+        .filter-btn:hover { border-color: #ff2442; color: #ff2442; }
+        .filter-btn.active { background: #ff2442; color: #fff; border-color: #ff2442; }
+        .chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+        .chart-box { background: #fff; border-radius: 10px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+        .chart-box h3 { font-size: 13px; color: #666; margin-bottom: 12px; }
+        .chart-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+        .chart-bar .bar-label { font-size: 12px; color: #555; min-width: 60px; text-align: right; }
+        .chart-bar .bar-fill { height: 22px; border-radius: 4px; min-width: 4px; transition: width 0.6s ease; }
+        .chart-bar .bar-value { font-size: 11px; color: #999; margin-left: 4px; }
+        .bar-keyword { background: #ff2442; }
+        .bar-pending { background: #ffb74d; }
+        .bar-running { background: #64b5f6; }
+        .bar-completed { background: #81c784; }
+        .bar-failed { background: #e57373; }
+        .task-item { padding: 14px 0; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; justify-content: space-between; }
+        .task-item:last-child { border-bottom: none; }
+        .task-info { flex: 1; min-width: 0; }
+        .task-name { font-weight: 500; font-size: 14px; }
+        .task-meta { font-size: 12px; color: #999; margin-top: 4px; display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+        .task-status { font-size: 12px; padding: 3px 10px; border-radius: 12px; white-space: nowrap; }
+        .status-pending { background: #fff3e0; color: #e65100; }
+        .status-running { background: #e3f2fd; color: #1565c0; }
+        .status-completed { background: #e8f5e9; color: #2e7d32; }
+        .status-failed { background: #fce4ec; color: #c62828; }
+        .task-actions { display: flex; gap: 6px; align-items: center; flex-shrink: 0; margin-left: 12px; }
+        .task-actions .count-badge { font-size: 12px; color: #ff2442; font-weight: 500; background: #fff5f5; padding: 2px 8px; border-radius: 10px; }
+        .empty { text-align: center; color: #999; padding: 40px 0; font-size: 14px; }
+        .tag { display: inline-block; background: #f0f0f0; padding: 2px 8px; border-radius: 4px; font-size: 12px; margin: 2px; }
+        .toast { position: fixed; top: 20px; right: 20px; padding: 12px 20px; border-radius: 8px; color: #fff; font-size: 14px; z-index: 1000; transform: translateX(120%); transition: transform 0.3s; }
+        .toast.show { transform: translateX(0); }
+        .toast-success { background: #2e7d32; }
+        .toast-error { background: #c62828; }
+        .loading { display: inline-block; width: 14px; height: 14px; border: 2px solid #ccc; border-top-color: #ff2442; border-radius: 50%; animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .text-muted { color: #999; font-size: 12px; }
+        .config-panel { background: #fffbe6; border: 1px solid #ffe58f; border-radius: 8px; padding: 14px; margin-bottom: 16px; }
+        .config-panel label { font-size: 13px; color: #8d6e00; font-weight: 500; }
+        .config-panel input { width: 100%; margin-top: 4px; font-size: 13px; }
+        @media (max-width: 768px) { .stats-row { grid-template-columns: repeat(2, 1fr); } .chart-grid { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+<div class="container">
+    <header>
+        <div>
+            <h1>📕 小红书账号ID采集工具</h1>
+            <p>按行业关键词采集小红书账号ID和主页链接</p>
+        </div>
+        <span id="updateTime" class="text-muted"></span>
+    </header>
+
+    <!-- API配置 -->
+    <div class="card">
+        <h2>🔗 后端服务配置</h2>
+        <div class="config-panel">
+            <label>采集后端 API 地址</label>
+            <input type="url" id="apiBaseUrl" value="http://localhost:8000" placeholder="http://your-server:8000">
+            <p style="font-size:12px;color:#999;margin-top:4px;">你的采集服务器地址，部署在Vercel后请修改为实际服务器地址</p>
+        </div>
+    </div>
+
+    <!-- 统计概览 -->
+    <div class="stats-row" id="statsRow">
+        <div class="stat-card stat-total">
+            <div class="stat-value" id="statTotal">0</div>
+            <div class="stat-label">总任务数</div>
+        </div>
+        <div class="stat-card stat-completed">
+            <div class="stat-value" id="statCompleted">0</div>
+            <div class="stat-label">已完成</div>
+        </div>
+        <div class="stat-card stat-running">
+            <div class="stat-value" id="statRunning">0</div>
+            <div class="stat-label">进行中</div>
+        </div>
+        <div class="stat-card stat-accounts">
+            <div class="stat-value" id="statAccounts">0</div>
+            <div class="stat-label">累计采集账号</div>
+        </div>
+    </div>
+
+    <!-- 图表 -->
+    <div class="chart-grid" id="chartGrid">
+        <div class="chart-box">
+            <h3>📊 按关键词分布（Top 10）</h3>
+            <div id="keywordChart"></div>
+        </div>
+        <div class="chart-box">
+            <h3>📈 按任务状态分布</h3>
+            <div id="statusChart"></div>
+        </div>
+    </div>
+
+    <!-- 创建任务 -->
+    <div class="card">
+        <h2>📝 创建采集任务</h2>
+        <div class="form-group">
+            <label>关键词（每行一个，或逗号分隔）</label>
+            <textarea id="keywords" placeholder="例如：&#10;健身&#10;瑜伽&#10;减脂餐&#10;健康饮食"></textarea>
+        </div>
+        <div class="form-group" style="display:flex; gap:12px; align-items:end;">
+            <div>
+                <label>翻页次数</label>
+                <input type="number" id="maxScroll" value="20" min="1" max="100" style="width:120px">
+            </div>
+            <button class="btn btn-primary" id="createBtn" onclick="createTask()" style="margin-bottom:0">🚀 开始采集</button>
+        </div>
+    </div>
+
+    <!-- 任务列表 -->
+    <div class="card">
+        <h2>
+            <span>📋 任务列表</span>
+            <div style="display:flex; gap:8px; align-items:center;">
+                <select id="sortSelect" onchange="loadTasks()" style="width:auto; font-size:12px; padding:6px 10px;">
+                    <option value="newest">最新优先</option>
+                    <option value="oldest">最早优先</option>
+                    <option value="most">采集最多</option>
+                    <option value="least">采集最少</option>
+                </select>
+            </div>
+        </h2>
+        <div class="filter-bar">
+            <span style="font-size:13px; color:#666;">状态筛选：</span>
+            <div class="filter-btn-group">
+                <button class="filter-btn active" data-filter="all" onclick="setFilter(this, 'all')">全部</button>
+                <button class="filter-btn" data-filter="pending" onclick="setFilter(this, 'pending')">等待中</button>
+                <button class="filter-btn" data-filter="running" onclick="setFilter(this, 'running')">采集中</button>
+                <button class="filter-btn" data-filter="completed" onclick="setFilter(this, 'completed')">已完成</button>
+                <button class="filter-btn" data-filter="failed" onclick="setFilter(this, 'failed')">失败</button>
+            </div>
+        </div>
+        <div id="taskList"></div>
+    </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+    let currentFilter = 'all';
+    let allTasks = [];
+
+    function getApiBase() {
+        let url = document.getElementById('apiBaseUrl').value.replace(/\/+$/, '');
+        localStorage.setItem('xhs_api_base', url);
+        return url;
+    }
+
+    function initApiBase() {
+        const saved = localStorage.getItem('xhs_api_base');
+        if (saved) document.getElementById('apiBaseUrl').value = saved;
+    }
+
+    async function apiFetch(path, options = {}) {
+        const base = getApiBase();
+        const url = base + path;
+        options.headers = { 'Content-Type': 'application/json', ...options.headers };
+        return fetch(url, options);
+    }
+
+    async function createTask() {
+        const textarea = document.getElementById('keywords');
+        const btn = document.getElementById('createBtn');
+        const raw = textarea.value.trim();
+        if (!raw) { showToast('请输入关键词', 'error'); return; }
+
+        const keywords = raw.split(/[,\n]+/).map(k => k.trim()).filter(k => k);
+        if (keywords.length === 0) { showToast('请输入有效关键词', 'error'); return; }
+
+        btn.disabled = true;
+        btn.innerHTML = '<span class="loading"></span> 创建中...';
+
+        try {
+            const res = await apiFetch('/api/task', {
+                method: 'POST',
+                body: JSON.stringify({
+                    keywords: keywords,
+                    max_scroll: parseInt(document.getElementById('maxScroll').value) || 20
+                })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                showToast(`任务已创建: ${data.name || data.task_id}`, 'success');
+                textarea.value = '';
+                loadTasks();
+            } else {
+                showToast(data.detail || data.error || '创建失败', 'error');
+            }
+        } catch (e) {
+            showToast('连接失败，请检查后端地址: ' + e.message, 'error');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '🚀 开始采集';
+        }
+    }
+
+    function setFilter(btn, filter) {
+        currentFilter = filter;
+        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        renderTasks(allTasks);
+    }
+
+    async function loadTasks() {
+        try {
+            const res = await apiFetch('/api/tasks');
+            allTasks = await res.json();
+            renderStats(allTasks);
+            renderCharts(allTasks);
+            renderTasks(allTasks);
+            document.getElementById('updateTime').textContent = '更新于 ' + new Date().toLocaleTimeString();
+        } catch (e) {
+            console.error('加载任务失败:', e);
+        }
+    }
+
+    function renderStats(tasks) {
+        const total = tasks.length;
+        const completed = tasks.filter(t => t.status === 'completed').length;
+        const running = tasks.filter(t => t.status === 'running' || t.status === 'pending').length;
+        const accounts = tasks.reduce((sum, t) => sum + (t.total_found || 0), 0);
+        document.getElementById('statTotal').textContent = total;
+        document.getElementById('statCompleted').textContent = completed;
+        document.getElementById('statRunning').textContent = running;
+        document.getElementById('statAccounts').textContent = accounts.toLocaleString();
+    }
+
+    function renderCharts(tasks) {
+        const kwMap = {};
+        tasks.forEach(t => { (t.keywords || []).forEach(kw => { kwMap[kw] = (kwMap[kw] || 0) + (t.total_found || 0); }); });
+        const kwSorted = Object.entries(kwMap).sort((a, b) => b[1] - a[1]).slice(0, 10);
+        const maxKw = kwSorted.length > 0 ? kwSorted[0][1] : 1;
+        const kwEl = document.getElementById('keywordChart');
+        if (kwSorted.length === 0) {
+            kwEl.innerHTML = '<div class="empty" style="padding:16px 0;">暂无数据</div>';
+        } else {
+            kwEl.innerHTML = kwSorted.map(([kw, count]) =>
+                `<div class="chart-bar"><span class="bar-label">${kw}</span><div class="bar-fill bar-keyword" style="width:${(count/maxKw*100).toFixed(1)}%"></div><span class="bar-value">${count}</span></div>`
+            ).join('');
+        }
+
+        const statusMap = { pending: tasks.filter(t => t.status === 'pending').length, running: tasks.filter(t => t.status === 'running').length, completed: tasks.filter(t => t.status === 'completed').length, failed: tasks.filter(t => t.status === 'failed').length };
+        const maxStatus = Math.max(...Object.values(statusMap), 1);
+        const statusLabels = { pending: '等待中', running: '采集中', completed: '已完成', failed: '失败' };
+        const statusColors = { pending: 'bar-pending', running: 'bar-running', completed: 'bar-completed', failed: 'bar-failed' };
+        const stEl = document.getElementById('statusChart');
+        if (Object.values(statusMap).every(v => v === 0)) {
+            stEl.innerHTML = '<div class="empty" style="padding:16px 0;">暂无数据</div>';
+        } else {
+            stEl.innerHTML = Object.entries(statusMap).map(([key, count]) =>
+                `<div class="chart-bar"><span class="bar-label">${statusLabels[key]}</span><div class="bar-fill bar-status ${statusColors[key]}" style="width:${(count/maxStatus*100).toFixed(1)}%"></div><span class="bar-value">${count}</span></div>`
+            ).join('');
+        }
+    }
+
+    function renderTasks(tasks) {
+        const el = document.getElementById('taskList');
+        const sortBy = document.getElementById('sortSelect').value;
+        let filtered = currentFilter === 'all' ? tasks : tasks.filter(t => t.status === currentFilter);
+        filtered.sort((a, b) => {
+            switch (sortBy) {
+                case 'newest': return b.created_at - a.created_at;
+                case 'oldest': return a.created_at - b.created_at;
+                case 'most': return (b.total_found || 0) - (a.total_found || 0);
+                case 'least': return (a.total_found || 0) - (b.total_found || 0);
+                default: return b.created_at - a.created_at;
+            }
+        });
+
+        if (filtered.length === 0) { el.innerHTML = '<div class="empty">暂无任务</div>'; return; }
+
+        let html = '';
+        for (const t of filtered) {
+            const status = t.status;
+            const time = new Date(t.created_at * 1000).toLocaleString();
+            const keywords = t.keywords.slice(0, 5);
+            const more = t.keywords.length > 5 ? `+${t.keywords.length - 5}` : '';
+            html += `
+                <div class="task-item">
+                    <div class="task-info">
+                        <div class="task-name">${t.name || t.task_id}</div>
+                        <div class="task-meta">
+                            ${keywords.map(k => `<span class="tag">${k}</span>`).join('')}
+                            ${more ? `<span class="tag">${more}</span>` : ''}
+                            <span style="margin-left:4px">${time}</span>
+                        </div>
+                    </div>
+                    <div class="task-actions">
+                        <span class="task-status status-${status}">${({pending:'等待中',running:'采集中',completed:'已完成',failed:'失败'})[status]||status}</span>
+                        ${t.total_found ? `<span class="count-badge">${t.total_found}条</span>` : ''}
+                        ${status === 'completed' && t.result_file ? `<button class="btn btn-sm btn-primary" onclick="downloadResult('${t.task_id}')">下载</button>` : ''}
+                        ${status === 'failed' ? `<span class="text-muted" style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${t.error||''}</span>` : ''}
+                        <button class="btn btn-sm btn-outline" onclick="deleteTask('${t.task_id}')" title="删除">🗑️</button>
+                    </div>
+                </div>`;
+        }
+        el.innerHTML = html;
+
+        const hasRunning = tasks.some(t => t.status === 'running' || t.status === 'pending');
+        if (hasRunning) { clearTimeout(window._pollTimer); window._pollTimer = setTimeout(loadTasks, 3000); }
+    }
+
+    async function downloadResult(taskId) { window.open((getApiBase().replace(/\/+$/, '')) + `/api/task/${taskId}/result`, '_blank'); }
+
+    async function deleteTask(taskId) {
+        if (!confirm('确认删除此任务？')) return;
+        try {
+            const res = await apiFetch(`/api/task/${taskId}`, { method: 'DELETE' });
+            if (res.ok) { showToast('已删除', 'success'); loadTasks(); }
+            else { showToast('删除失败', 'error'); }
+        } catch (e) { showToast('网络错误', 'error'); }
+    }
+
+    function showToast(msg, type) {
+        const toast = document.getElementById('toast');
+        toast.className = `toast toast-${type} show`;
+        toast.textContent = msg;
+        setTimeout(() => toast.classList.remove('show'), 3000);
+    }
+
+    initApiBase();
+    loadTasks();
+    setInterval(loadTasks, 10000);
+</script>
+</body>
+</html>
